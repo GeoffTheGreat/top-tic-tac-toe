@@ -1,0 +1,39 @@
+* {
+  padding: 0;
+  margin: 0;
+}
+.player--select {
+  display: none;
+  justify-content: space-around;
+}
+.player--card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fa-o {
+  font-size: 8vw;
+}
+.fa-xmark {
+  font-size: 10vw;
+}
+.game--section {
+  display: flex;
+  padding: 2rem;
+  justify-content: space-around;
+}
+.game__board {
+  display: grid;
+  justify-content: center;
+  grid-template-columns: auto auto auto;
+  grid-template-rows: auto auto auto;
+}
+.game--square {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 8vw;
+  height: 8vw;
+  border: 1px solid black;
+  border-radius: 5px;
+}
