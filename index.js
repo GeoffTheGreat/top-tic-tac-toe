@@ -161,7 +161,11 @@ var gameBoard = (() => {
   let gameTiles = [];
   events.on("setBoard", bindTiles);
   document.getElementById("restart").addEventListener("click", resetBoard);
+  document.getElementById("reset").addEventListener("click", reloadWindow);
 
+  function reloadWindow() {
+    location.reload();
+  }
   function resetBoard() {
     bindTiles("newGame");
   }
@@ -170,6 +174,7 @@ var gameBoard = (() => {
     gameTiles = [];
     playerTurn = 1;
     document.querySelector(".game--section").style.display = "flex";
+    document.getElementById("game__board").style.display = "grid";
 
     for (let i = 1; i < 10; i++) {
       gameTiles.push(document.getElementById(`gs${i}`));
@@ -246,24 +251,24 @@ var playAgain = (() => {
     btnAgain.textContent = "play again";
     playAgain.appendChild(winMessage);
     playAgain.appendChild(btnAgain);
+    const gameBoard = document.getElementById("game__board");
+    gameBoard.style.display = "none";
     if (winner === "playerOne") {
       winMessage.textContent = `Congratulations ${playerOne.replace(
         "Name: ",
         ""
       )} has Won! Better luck next time ${playerTwo.replace("Name: ", "")}`;
-      document.querySelector(".player--one--section").appendChild(playAgain);
     }
     if (winner === "playerTwo") {
       winMessage.textContent = `Congratulations ${playerTwo.replace(
         "Name: ",
         ""
       )} has Won! Better luck next time ${playerOne.replace("Name: ", "")}`;
-      document.querySelector(".player--two--section").appendChild(playAgain);
     }
     if (winner === "draw") {
       winMessage.textContent = `Ah ha your wits are matched its a draw`;
-      document.querySelector(".player--one--section").appendChild(playAgain);
     }
+    document.querySelector(".game--board--section").appendChild(playAgain);
 
     btnAgain.addEventListener("click", newGame);
   }
