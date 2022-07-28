@@ -3,13 +3,19 @@
   margin: 0;
 }
 .player--select {
-  display: none;
-  justify-content: space-around;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  height: 100vh;
 }
 .player--card {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 1rem;
+  border: 1px solid grey;
+  border-radius: 5px;
 }
 .fa-o {
   font-size: 8vw;
@@ -18,7 +24,7 @@
   font-size: 10vw;
 }
 .game--section {
-  display: flex;
+  display: none;
   padding: 2rem;
   justify-content: space-around;
 }
@@ -36,4 +42,10 @@
   height: 8vw;
   border: 1px solid black;
   border-radius: 5px;
+}
+.game--square:hover {
+  background-color: lightgray;
+}
+.winning--tile {
+  color: green;
 }
