@@ -69,9 +69,8 @@ var playerSelect = (() => {
     }
   }
   function displayGame() {
-    document.querySelector(".game--section").style.display = "flex";
     events.emit("playerCreated", players);
-    events.emit("setBoard");
+    events.emit("setBoard", "newGame");
   }
 })();
 
@@ -160,13 +159,38 @@ var playerTwo = (() => {
 var gameBoard = (() => {
   let playerTurn = 1;
   let gameTiles = [];
-  for (let i = 1; i < 10; i++) {
-    gameTiles.push(document.getElementById(`gs${i}`));
+  events.on("setBoard", bindTiles);
+  document.getElementById("restart").addEventListener("click", resetBoard);
+
+  function resetBoard() {
+    bindTiles("newGame");
   }
 
-  gameTiles.forEach((tile) => {
-    tile.addEventListener("click", tileClick);
-  });
+  function bindTiles(gameType) {
+    gameTiles = [];
+    playerTurn = 1;
+    document.querySelector(".game--section").style.display = "flex";
+
+    for (let i = 1; i < 10; i++) {
+      gameTiles.push(document.getElementById(`gs${i}`));
+      document.getElementById(`gs${i}`).classList.remove("occupied");
+    }
+    gameTiles.forEach((tile) => {
+      tile.addEventListener("click", tileClick);
+    });
+    if (gameType === "newGame") {
+      gameTiles.forEach((tile) => {
+        if (tile.firstElementChild !== null) {
+          tile.firstElementChild.remove();
+        }
+      });
+      const newGameDiv = document.querySelector(".play-again");
+      if (newGameDiv !== null) {
+        newGameDiv.remove();
+      }
+    }
+  }
+
   function tileClick(e) {
     let tileId = e.target.id;
 
@@ -183,13 +207,15 @@ var gameBoard = (() => {
   events.on("roundOver", updateWinner);
 
   function updateWinner(winningTiles) {
-    console.log(winningTiles);
+    // console.log(winningTiles);
+    gameTiles.forEach((tile) => {
+      tile.removeEventListener("click", tileClick);
+    });
     if (winningTiles !== "draw") {
       let winner;
       for (let i = 0; i < winningTiles.length; i++) {
         let tile = winningTiles[i][0];
         tile.firstElementChild.classList.add("winning--tile");
-        tile.removeEventListener("click", tileClick);
       }
       if (winningTiles[0][1] === "fa-xmark") {
         winner = "playerOne";
@@ -197,7 +223,54 @@ var gameBoard = (() => {
         winner = "playerTwo";
       }
       events.emit("updateScore", winner);
+    } else {
+      events.emit("updateScore", "draw");
     }
+  }
+})();
+
+var playAgain = (() => {
+  events.on("updateScore", displayPlayAgain);
+
+  function displayPlayAgain(winner) {
+    const playerOne = document.getElementById(
+      "player--one--name--display"
+    ).textContent;
+    const playerTwo = document.getElementById(
+      "player--two--name--display"
+    ).textContent;
+    const playAgain = document.createElement("div");
+    playAgain.classList.add("play-again");
+    const winMessage = document.createElement("p");
+    const btnAgain = document.createElement("button");
+    btnAgain.textContent = "play again";
+    playAgain.appendChild(winMessage);
+    playAgain.appendChild(btnAgain);
+    if (winner === "playerOne") {
+      winMessage.textContent = `Congratulations ${playerOne.replace(
+        "Name: ",
+        ""
+      )} has Won! Better luck next time ${playerTwo.replace("Name: ", "")}`;
+      document.querySelector(".player--one--section").appendChild(playAgain);
+    }
+    if (winner === "playerTwo") {
+      winMessage.textContent = `Congratulations ${playerTwo.replace(
+        "Name: ",
+        ""
+      )} has Won! Better luck next time ${playerOne.replace("Name: ", "")}`;
+      document.querySelector(".player--two--section").appendChild(playAgain);
+    }
+    if (winner === "draw") {
+      winMessage.textContent = `Ah ha your wits are matched its a draw`;
+      document.querySelector(".player--one--section").appendChild(playAgain);
+    }
+
+    btnAgain.addEventListener("click", newGame);
+  }
+
+  function newGame(e) {
+    events.emit("setBoard", "newGame");
+    e.target.removeEventListener("click", newGame);
   }
 })();
 
@@ -205,6 +278,7 @@ var checkWinner = (() => {
   events.on("moveMade", checkBoard);
 
   function checkBoard(tileList) {
+    console.log(tileList);
     let tileContent = [];
     for (let i = 0; i < tileList.length; i++) {
       if (tileList[i].firstElementChild === null) {
@@ -219,6 +293,7 @@ var checkWinner = (() => {
     checkIfWins(tileContent);
   }
   function checkIfWins(tileContent) {
+    // console.log(tileContent);
     let tilesPlayed = 0;
 
     tileContent.forEach((tile) => {
@@ -233,7 +308,7 @@ var checkWinner = (() => {
       [tileContent[6], tileContent[7], tileContent[8]],
     ];
     let hasWon = false;
-    let winningTiles;
+    let winningTiles = [];
     //check rows
     for (let i = 0; i < grid.length; i++) {
       if (grid[i][0][1] !== "") {
