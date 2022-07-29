@@ -32,6 +32,17 @@ var playerSelect = (() => {
   );
   submitBtns.forEach((btn) => btn.addEventListener("click", submitPlayer));
 
+  const isCpuCheckbox = document.getElementById("play--cpu");
+  isCpuCheckbox.addEventListener("change", displayLevel);
+
+  function displayLevel(e) {
+    if (e.target.checked) {
+      document.getElementById("cpu--level--choice").style.display = "block";
+    } else {
+      document.getElementById("cpu--level--choice").style.display = "none";
+    }
+  }
+
   //handles player submit
   function submitPlayer(e) {
     let parentElement = e.target.parentElement;
@@ -42,9 +53,17 @@ var playerSelect = (() => {
       let playerNameInput = document.getElementById("player--one--name");
       assignPlayer(playerNameInput, playerDetails, e);
     } else if (parentId === "player--two") {
-      playerDetails.player = "Player Two";
-      let playerNameInput = document.getElementById("player--two--name");
-      assignPlayer(playerNameInput, playerDetails, e);
+      if (isCpuCheckbox.checked) {
+        playerDetails.player =
+          document.getElementById("cpu--level--choice").value;
+        let playerNameInput = document.getElementById("player--two--name");
+        playerNameInput.value = "Geoff";
+        assignPlayer(playerNameInput, playerDetails, e);
+      } else {
+        playerDetails.player = "Player Two";
+        let playerNameInput = document.getElementById("player--two--name");
+        assignPlayer(playerNameInput, playerDetails, e);
+      }
     }
   }
 
@@ -119,12 +138,22 @@ var playerTwo = (() => {
   let playerTwoScore = 0;
   events.on("playerCreated", setPlayerTwo);
   events.on("playerTwoTileChange", makeMove);
+  let cpuDifficulty = "easy";
   function setPlayerTwo(players) {
     let playerName;
-    if (players[0].player === "Player Two") {
+
+    if (players[0].player !== "Player One") {
       playerName = players[0].playerName;
+      if (players[0].player !== "Player Two") {
+        cpuDifficulty = players[0].player;
+        events.emit("cpuPlays", cpuDifficulty);
+      }
     } else {
       playerName = players[1].playerName;
+      if (players[1].player !== "Player Two") {
+        cpuDifficulty = players[1].player;
+        events.emit("cpuPlays", cpuDifficulty);
+      }
     }
     renderPlayerTwo(playerName);
   }
@@ -138,6 +167,7 @@ var playerTwo = (() => {
     scoreBox.textContent = `Score: ${score}`;
   }
   function makeMove(tileId) {
+    // console.log("tile id ", tileId);
     let omark = document.createElement("i");
     omark.classList.add("fa-solid");
     omark.classList.add("fa-o");
@@ -171,6 +201,8 @@ var gameBoard = (() => {
   }
 
   function bindTiles(gameType) {
+    const newGameDiv = Array.from(document.querySelectorAll(".play-again"));
+    newGameDiv.forEach((div) => div.remove());
     gameTiles = [];
     playerTurn = 1;
     document.querySelector(".game--section").style.display = "flex";
@@ -189,13 +221,9 @@ var gameBoard = (() => {
           tile.firstElementChild.remove();
         }
       });
-      const newGameDiv = document.querySelector(".play-again");
-      if (newGameDiv !== null) {
-        newGameDiv.remove();
-      }
     }
   }
-
+  events.on("cpuTurnEnd", tileClick);
   function tileClick(e) {
     let tileId = e.target.id;
 
@@ -204,10 +232,14 @@ var gameBoard = (() => {
     } else if (playerTurn % 2 === 0) {
       events.emit("playerTwoTileChange", tileId);
     }
-    e.target.classList.add("occupied");
+    document.getElementById(tileId).classList.add("occupied");
+    document.getElementById(tileId).removeEventListener("click", tileClick);
     playerTurn++;
+
     events.emit("moveMade", gameTiles);
-    e.target.removeEventListener("click", tileClick);
+    if (playerTurn % 2 === 0 && playerTurn < 9) {
+      events.emit("playerTwoTurn", gameTiles);
+    }
   }
   events.on("roundOver", updateWinner);
 
@@ -252,7 +284,7 @@ var playAgain = (() => {
     playAgain.appendChild(winMessage);
     playAgain.appendChild(btnAgain);
     const gameBoard = document.getElementById("game__board");
-    gameBoard.style.display = "none";
+    // gameBoard.style.display = "none";
     if (winner === "playerOne") {
       winMessage.textContent = `Congratulations ${playerOne.replace(
         "Name: ",
@@ -275,15 +307,153 @@ var playAgain = (() => {
 
   function newGame(e) {
     events.emit("setBoard", "newGame");
+    e.target.parentElement.remove();
     e.target.removeEventListener("click", newGame);
   }
 })();
 
-var checkWinner = (() => {
-  events.on("moveMade", checkBoard);
+var playerComputer = (() => {
+  events.on("cpuPlays", setDifficulty);
+  let difficultyLevel = 0;
+  function setDifficulty(cpuLevel) {
+    switch (cpuLevel) {
+      case "easy":
+        difficultyLevel = 1;
+        break;
+      case "medium":
+        difficultyLevel = 2;
+        break;
+      case "hard":
+        difficultyLevel = 3;
+        break;
+      default:
+        break;
+    }
+  }
 
+  events.on("playerTwoTurn", canPlay);
+  function canPlay(tiles) {
+    // console.log("can play", tiles);
+    let bestScore = -Infinity;
+    let bestMove;
+    if (difficultyLevel === 1) {
+      let id;
+      for (let i = 0; i < tiles.length; i++) {
+        if (tiles[i].firstElementChild === null) {
+          id = i + 1;
+        }
+      }
+      events.emit("cpuTurnEnd", { target: { id: `gs${id}` } });
+    }
+    if (difficultyLevel === 2) {
+      let rounds = 0;
+      if (rounds < 1) {
+        for (let i = 0; i < tiles.length; i++) {
+          if (tiles[i].firstElementChild === null) {
+            bestMove = `gs${i + 1}`;
+          }
+        }
+      } else {
+        for (let i = 0; i < tiles.length; i++) {
+          if (tiles[i].firstElementChild === null) {
+            makeMove(tiles[i].id);
+            let score = minimax(tiles, 0, false);
+            tiles[i].firstElementChild.remove();
+            if (score > bestScore) {
+              bestScore = score;
+              bestMove = tiles[i].id;
+            }
+            if (bestMove === undefined) {
+              bestMove = tiles[i].id;
+            }
+          }
+        }
+      }
+      events.emit("cpuTurnEnd", { target: { id: bestMove } });
+    }
+
+    if (difficultyLevel === 3) {
+      for (let i = 0; i < tiles.length; i++) {
+        if (tiles[i].firstElementChild === null) {
+          makeMove(tiles[i].id);
+          let score = minimax(tiles, 0, false);
+          tiles[i].firstElementChild.remove();
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = tiles[i].id;
+          }
+          if (bestMove === undefined) {
+            bestMove = tiles[i].id;
+          }
+        }
+      }
+
+      events.emit("cpuTurnEnd", { target: { id: bestMove } });
+    }
+  }
+  function makeMove(tileId) {
+    let omark = document.createElement("i");
+    omark.classList.add("fa-solid");
+    omark.classList.add("fa-o");
+    omark.classList.add("algoTest");
+    let targetTile = document.getElementById(tileId);
+    targetTile.appendChild(omark);
+  }
+  function makeXmove(tileId) {
+    let xmark = document.createElement("i");
+    xmark.classList.add("fa-solid");
+    xmark.classList.add("fa-xmark");
+    xmark.classList.add("algoTest");
+    let targetTile = document.getElementById(tileId);
+    targetTile.appendChild(xmark);
+  }
+
+  function minimax(board, depth, isMaximizing) {
+    let result = checkWinner.checkBoard(board);
+    let tiles = board;
+    // console.log("tileList", tiles);
+    if (result[0] !== "undeclared") {
+      let score = result[0];
+      return score;
+    }
+    if (isMaximizing) {
+      let bestScore = -Infinity;
+      for (let i = 0; i < tiles.length; i++) {
+        if (tiles[i].firstElementChild === null) {
+          makeMove(tiles[i].id);
+          let score = minimax(tiles, depth + 1, false);
+          tiles[i].firstElementChild.remove();
+          if (score > bestScore) {
+            bestScore = score;
+          }
+        }
+      }
+      return bestScore;
+    } else {
+      let bestScore = +Infinity;
+      for (let i = 0; i < tiles.length; i++) {
+        if (tiles[i].firstElementChild === null) {
+          makeXmove(tiles[i].id);
+          let score = minimax(tiles, depth + 1, true);
+          tiles[i].firstElementChild.remove();
+          if (score < bestScore) {
+            bestScore = score;
+          }
+        }
+      }
+      return bestScore;
+    }
+  }
+})();
+
+var checkWinner = (() => {
+  events.on("moveMade", checkWin);
+  function checkWin(gameTiles) {
+    if (checkWinner.checkBoard(gameTiles)[0] !== "undeclared") {
+      events.emit("roundOver", checkWinner.checkBoard(gameTiles)[1]);
+    }
+  }
   function checkBoard(tileList) {
-    console.log(tileList);
     let tileContent = [];
     for (let i = 0; i < tileList.length; i++) {
       if (tileList[i].firstElementChild === null) {
@@ -295,7 +465,19 @@ var checkWinner = (() => {
         ]);
       }
     }
-    checkIfWins(tileContent);
+    let checkResult = checkIfWins(tileContent);
+    if (checkResult !== undefined) {
+      if (checkResult === "draw") {
+        return [0, checkResult];
+      } else if (checkResult[0][1] === "fa-xmark") {
+        return [-1, checkResult];
+      } else if (checkResult[0][1] === "fa-o") {
+        return [1, checkResult];
+      }
+    } else {
+      // console.log(checkResult);
+      return ["undeclared", checkResult];
+    }
   }
   function checkIfWins(tileContent) {
     // console.log(tileContent);
@@ -357,7 +539,8 @@ var checkWinner = (() => {
     }
 
     if (hasWon) {
-      events.emit("roundOver", winningTiles);
+      return winningTiles;
     }
   }
+  return { checkBoard, checkIfWins };
 })();

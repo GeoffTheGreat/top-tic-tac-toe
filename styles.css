@@ -56,10 +56,16 @@
 }
 .play-again {
   display: flex;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   flex-direction: column;
   align-items: center;
-  justify-items: center;
-  background-color: rgba(255, 255, 255, 0.212);
+  justify-content: center;
+  background-color: rgba(0, 2, 2, 0.8);
+  color: #fff;
 }
 .game--board--section {
   display: flex;
@@ -75,4 +81,12 @@
 }
 #restart {
   background-color: orange;
+}
+.cpu--section--element {
+  display: flex;
+  gap: 5px;
+  align-content: center;
+}
+#cpu--level--choice {
+  display: none;
 }
